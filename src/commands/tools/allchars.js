@@ -21,36 +21,38 @@ module.exports = {
       const userData = userDoc.data();
       const characters = userData.characters || [];
 
-      if (characters.length > 0) {
-        const groupedCharacters = {};
-
-        characters.forEach((character) => {
-          // Group characters by class
-          if (!groupedCharacters[character.class]) {
-            groupedCharacters[character.class] = [];
-          }
-          groupedCharacters[character.class].push(character.ign);
-        });
-
-        const userCharacters = [];
-
-        for (const characterClass in groupedCharacters) {
-          // Display classes with multiple IGNs as a comma-separated list
-          if (groupedCharacters[characterClass].length > 1) {
-            userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
-          } else {
-            userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
-          }
-        }
-
-        const member = await interaction.guild.members.fetch(userDoc.id);
-        const username = member ? member.user.username : 'User not found';
-
-        allCharacterInfo.push({ user: username, characters: userCharacters });
+      if (!characters?.length) {
+        return;
       }
+
+      const groupedCharacters = {};
+
+      characters.forEach((character) => {
+        // Group characters by class
+        if (!groupedCharacters[character.class]) {
+          groupedCharacters[character.class] = [];
+        }
+        groupedCharacters[character.class].push(character.ign);
+      });
+
+      const userCharacters = [];
+
+      for (const characterClass in groupedCharacters) {
+        // Display classes with multiple IGNs as a comma-separated list
+        if (groupedCharacters[characterClass].length > 1) {
+          userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
+          continue;
+        }
+        userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
+      }
+
+      const member = await interaction.guild.members.fetch(userDoc.id);
+      const username = member ? member.user.username : 'User not found';
+
+      allCharacterInfo.push({ user: username, characters: userCharacters });
     }
 
-    if (allCharacterInfo.length === 0) {
+    if (!allCharacterInfo?.length) {
       interaction.reply('No character information found for any user.');
       return;
     }

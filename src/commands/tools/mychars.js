@@ -42,11 +42,12 @@ module.exports = {
 
     for (const characterClass in groupedCharacters) {
       // Display classes with multiple IGNs as a comma-separated list
-      if (groupedCharacters[characterClass].length > 1) {
-        userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
-      } else {
+      if (!groupedCharacters[characterClass]?.length) {
         userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
-      }
+        continue;
+      } 
+      
+      userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
     }
 
     const username = interaction.user.username;
