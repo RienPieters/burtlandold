@@ -21,7 +21,7 @@ module.exports = {
       const userData = userDoc.data();
       const characters = userData.characters || [];
 
-      if (characters.length == 0) {
+      if (characters.length === 0) {
         return;
       }
 
@@ -52,7 +52,7 @@ module.exports = {
       allCharacterInfo.push({ user: username, characters: userCharacters });
     }
 
-    if (allCharacterInfo.length == 0) {
+    if (allCharacterInfo.length === 0) {
       interaction.reply('No character information found for any user.');
       return;
     }
