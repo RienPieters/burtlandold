@@ -41,7 +41,7 @@ module.exports = {
       }
     }
 
-    if (!foundCharacters?.length) {
+    if (foundCharacters.length === 0) {
       await interaction.reply(`IGN '**${ignToFind}**' not found.`);
       return;
     }

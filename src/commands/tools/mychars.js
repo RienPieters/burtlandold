@@ -42,7 +42,7 @@ module.exports = {
 
     for (const characterClass in groupedCharacters) {
       // Display classes with multiple IGNs as a comma-separated list
-      if (!groupedCharacters[characterClass]?.length) {
+      if (groupedCharacters[characterClass].length === 0) {
         userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
         continue;
       } 

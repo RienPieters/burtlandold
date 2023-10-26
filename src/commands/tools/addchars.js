@@ -38,7 +38,7 @@ module.exports = {
         const usersQuery = await usersRef.get();
         for (const userDoc of usersQuery.docs) {
             const userData = userDoc.data();
-            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase)) {
+            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
                 await interaction.reply('This IGN is already in use by another user. Please choose a different IGN.');
                 return;
             }

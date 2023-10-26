@@ -21,7 +21,7 @@ module.exports = {
       const userData = userDoc.data();
       const characters = userData.characters || [];
 
-      if (!characters?.length) {
+      if (characters.length == 0) {
         return;
       }
 
@@ -47,12 +47,12 @@ module.exports = {
       }
 
       const member = await interaction.guild.members.fetch(userDoc.id);
-      const username = member ? member.user.username : 'User not found';
+      const username = member.user.username ?? 'User not found';
 
       allCharacterInfo.push({ user: username, characters: userCharacters });
     }
 
-    if (!allCharacterInfo?.length) {
+    if (allCharacterInfo.length == 0) {
       interaction.reply('No character information found for any user.');
       return;
     }
