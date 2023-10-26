@@ -53,9 +53,9 @@ module.exports = {
             // Display classes with multiple IGNs as a comma-separated list
             if (groupedCharacters[characterClass].length > 1) {
                 userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
-            } else {
-                userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
+                continue;
             }
+            userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
         }
 
         const username = user.username;

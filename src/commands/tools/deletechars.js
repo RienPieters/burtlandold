@@ -22,25 +22,24 @@ module.exports = {
         // Get the user document for the current user
         const userDoc = await usersRef.doc(userId).get();
 
-        if (userDoc.exists) {
-            const userData = userDoc.data();
-
-            // Check if the user has a `characters` array
-            if (userData.characters) {
-                const updatedCharacters = userData.characters.filter(character => character.ign !== ignToDelete);
-
-                if (updatedCharacters.length !== userData.characters.length) {
-                    // Update the user document with the modified `characters` array
-                    await usersRef.doc(userId).update({ characters: updatedCharacters });
-                    await interaction.reply(`Character with IGN '${ignToDelete}' has been deleted.`);
-                } else {
-                    await interaction.reply(`Character with IGN '${ignToDelete}' not found in your character list.`);
-                }
-            } else {
-                await interaction.reply("No character data found for this user.");
-            }
-        } else {
+        if (!userDoc.exists) {
             await interaction.reply("User document not found. Please make sure you have previously registered.");
+            return;
         }
-    }
-};
+        const userData = userDoc.data();
+
+        // Check if the user has a `characters` array
+        if (!userData.characters) {
+            await interaction.reply("No character data found for this user.");
+        }
+        const updatedCharacters = userData.characters.filter(character => character.ign !== ignToDelete);
+
+        if (updatedCharacters.length !== userData.characters.length) {
+            // Update the user document with the modified `characters` array
+            await usersRef.doc(userId).update({ characters: updatedCharacters });
+            await interaction.reply(`Character with IGN '${ignToDelete}' has been deleted.`);
+            return;
+        }
+        await interaction.reply(`Character with IGN '${ignToDelete}' not found in your character list.`);
+    },
+}

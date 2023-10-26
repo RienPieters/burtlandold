@@ -24,7 +24,7 @@ module.exports = {
         ),
     async execute(interaction) {
         const characterClass = interaction.options.getString('class');
-        let ign = interaction.options.getString('ign');
+        const ign = interaction.options.getString('ign');
 
         const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
 
@@ -33,15 +33,12 @@ module.exports = {
             return;
         }
 
-        // Convert IGN to lowercase
-        ign = ign.toLowerCase();
-
         // Check if the IGN is already in use across all users
         const usersRef = db.collection('users');
         const usersQuery = await usersRef.get();
         for (const userDoc of usersQuery.docs) {
             const userData = userDoc.data();
-            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign)) {
+            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase)) {
                 await interaction.reply('This IGN is already in use by another user. Please choose a different IGN.');
                 return;
             }
@@ -58,18 +55,18 @@ module.exports = {
             return;
         }
 
-            let userData = userDoc.data();
+        let userData = userDoc.data();
 
-            // Initialize the characters array if it doesn't exist
-            userData.characters = userData.characters || [];
+        // Initialize the characters array if it doesn't exist
+        userData.characters = userData.characters || [];
 
-            // Add the new character (IGN and class) to the characters array
-            userData.characters.push({ ign, class: characterClass });
+        // Add the new character (IGN and class) to the characters array
+        userData.characters.push({ ign, class: characterClass });
 
-            // Update the user document with the modified characters
-            await userRef.set(userData);
+        // Update the user document with the modified characters
+        await userRef.set(userData);
 
-            await interaction.reply(`Your character information has been stored. Class: ${characterClass}, IGN: ${ign}`);
-        
+        await interaction.reply(`Your character information has been stored. Class: ${characterClass}, IGN: ${ign}`);
+
     }
 };
