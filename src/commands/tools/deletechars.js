@@ -1,6 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const db = require('../../db');
-const admin = require("firebase-admin");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -32,7 +31,7 @@ module.exports = {
         if (!userData.characters) {
             await interaction.reply("No character data found for this user.");
         }
-        const updatedCharacters = userData.characters.filter(character => character.ign !== ignToDelete);
+        const updatedCharacters = userData.characters.filter(character => character.ign.toLowerCase() !== ignToDelete.toLowerCase());
 
         if (updatedCharacters.length !== userData.characters.length) {
             // Update the user document with the modified `characters` array

@@ -11,9 +11,14 @@ module.exports = {
                 .setDescription('Your character class')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Raider', value: 'raider' },
-                    { name: 'Cleric', value: 'cleric' },
-                    { name: 'Bourgeois', value: 'bourgeois' }
+                    { name: 'Artisan', value: 'Artisan' },
+                    { name: 'Bourgeois', value: 'Bourgeois' },
+                    { name: 'Champion', value: 'Champion' },
+                    { name: 'Cleric', value: 'Cleric' },
+                    { name: 'Knight', value: 'Knight' },
+                    { name: 'Mage', value: 'Mage' },
+                    { name: 'Raider', value: 'Raider' },
+                    { name: 'Scout', value: 'Scout' },
                 )
         )
         .addStringOption(option =>
@@ -26,22 +31,16 @@ module.exports = {
         const characterClass = interaction.options.getString('class');
         const ign = interaction.options.getString('ign');
 
+        if (ign.length < 4 || ign.length >= 16) {
+            await interaction.reply('IGN should be 4 to 16 characters in length.');
+            return;
+        }
+
         const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
 
         if (!isValidIgn) {
             await interaction.reply('IGN should contain only letters and numbers.');
             return;
-        }
-
-        // Check if the IGN is already in use across all users
-        const usersRef = db.collection('users');
-        const usersQuery = await usersRef.get();
-        for (const userDoc of usersQuery.docs) {
-            const userData = userDoc.data();
-            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase)) {
-                await interaction.reply('This IGN is already in use by another user. Please choose a different IGN.');
-                return;
-            }
         }
 
         const userId = interaction.user.id;
@@ -51,11 +50,17 @@ module.exports = {
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
-            await interaction.reply("User document not found. Please make sure you have previously registered.");
-            return;
+            // Create a new user document with an empty 'characters' array
+            await userRef.set({ characters: [] });
         }
 
-        let userData = userDoc.data();
+        const userData = userDoc.data() || {}; // Initialize userData as an empty object
+
+        // Check if the user already has this IGN
+        if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
+            await interaction.reply('You already have a character with this IGN. Please choose a different IGN.');
+            return;
+        }
 
         // Initialize the characters array if it doesn't exist
         userData.characters = userData.characters || [];
@@ -64,9 +69,8 @@ module.exports = {
         userData.characters.push({ ign, class: characterClass });
 
         // Update the user document with the modified characters
-        await userRef.set(userData);
+        await userRef.update({ characters: userData.characters });
 
         await interaction.reply(`Your character information has been stored. Class: ${characterClass}, IGN: ${ign}`);
-
     }
 };
