@@ -40,20 +40,20 @@ module.exports = {
 
     const userCharacters = [];
 
-    for (const characterClass in groupedCharacters) {
+    const sortedClasses = Object.keys(groupedCharacters).sort();
+    for (const characterClass of sortedClasses) {
       // Display classes with multiple IGNs as a comma-separated list
-      if (groupedCharacters[characterClass].length === 0) {
+      if (groupedCharacters[characterClass].length > 1) {
+        userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
+      } else {
         userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
-        continue;
       }
-
-      userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
     }
 
-    const username = interaction.user.username;
+    const username = interaction.user.displayName;
 
     const embed = {
-      title: `Your Character Information, ${username}`,
+      title: `Your Character Information, ${username}:`,
       description: userCharacters.join('\n'),
       color: 0x00ff00, // Green color
     };

@@ -27,50 +27,59 @@ module.exports = {
                 .setDescription('IGN')
                 .setRequired(true)
         ),
+
     async execute(interaction) {
-        const characterClass = interaction.options.getString('class');
-        const ign = interaction.options.getString('ign');
+        try {
+            // Get character class and IGN from command options
+            const characterClass = interaction.options.getString('class');
+            const ign = interaction.options.getString('ign');
 
-        if (ign.length < 4 || ign.length >= 16) {
-            await interaction.reply('IGN should be 4 to 16 characters in length.');
-            return;
+            // Validate IGN length
+            if (ign.length < 4 || ign.length >= 16) {
+                await interaction.reply('IGN should be 4 to 16 characters in length.');
+                return;
+            }
+
+            // Validate IGN format (letters and numbers only)
+            const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
+
+            if (!isValidIgn) {
+                await interaction.reply('IGN should contain only letters and numbers.');
+                return;
+            }
+
+            const userId = interaction.user.id;
+            const userRef = db.collection('users').doc(userId);
+
+            // Check if the user document exists
+            const userDoc = await userRef.get();
+
+            if (!userDoc.exists) {
+                // Create a new user document with an empty 'characters' array
+                await userRef.set({ characters: [] });
+            }
+
+            const userData = userDoc.data() || {}; // Initialize userData as an empty object
+
+            // Check if the user already has this IGN
+            if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
+                await interaction.reply('You already have a character with this IGN. Please choose a different IGN.');
+                return;
+            }
+
+            // Initialize the characters array if it doesn't exist
+            userData.characters = userData.characters || [];
+
+            // Add the new character (IGN and class) to the characters array
+            userData.characters.push({ ign, class: characterClass });
+
+            // Update the user document with the modified characters
+            await userRef.update({ characters: userData.characters });
+
+            await interaction.reply(`Your character information has been stored. Class: ${characterClass}, IGN: ${ign}`);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
         }
-
-        const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
-
-        if (!isValidIgn) {
-            await interaction.reply('IGN should contain only letters and numbers.');
-            return;
-        }
-
-        const userId = interaction.user.id;
-        const userRef = db.collection('users').doc(userId);
-
-        // Check if the user document exists
-        const userDoc = await userRef.get();
-
-        if (!userDoc.exists) {
-            // Create a new user document with an empty 'characters' array
-            await userRef.set({ characters: [] });
-        }
-
-        const userData = userDoc.data() || {}; // Initialize userData as an empty object
-
-        // Check if the user already has this IGN
-        if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
-            await interaction.reply('You already have a character with this IGN. Please choose a different IGN.');
-            return;
-        }
-
-        // Initialize the characters array if it doesn't exist
-        userData.characters = userData.characters || [];
-
-        // Add the new character (IGN and class) to the characters array
-        userData.characters.push({ ign, class: characterClass });
-
-        // Update the user document with the modified characters
-        await userRef.update({ characters: userData.characters });
-
-        await interaction.reply(`Your character information has been stored. Class: ${characterClass}, IGN: ${ign}`);
     }
 };

@@ -33,66 +33,66 @@ module.exports = {
         .setDescription('The IGN to add')
         .setRequired(true)
     ),
+
   async execute(interaction) {
-    // Check if the user executing the command has the "sentinel" role
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    if (!member.roles.cache.some(role => role.name === 'Sentinel')) {
-      interaction.reply('You do not have permission to use this command.');
-      return;
-    }
-
-    const user = interaction.options.getUser('user'); // Get the mentioned user
-    const userId = user.id;
-    const characterClass = interaction.options.getString('class');
-    const ign = interaction.options.getString('ign');
-
-    if (ign.length < 4 || ign.length >= 16) {
-      await interaction.reply('IGN should be 4 to 16 characters in length.');
-      return;
-    }
-
-    const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
-
-    if (!isValidIgn) {
-      await interaction.reply('IGN should contain only letters and numbers.');
-      return;
-    }
-
-    // Reference to the user's document
-    const userRef = db.collection('users').doc(userId);
-
-    // Check if the user's document exists
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      // Initialize the user document with an empty 'characters' array
-      await userRef.set({ characters: [] });
-    }
-
-    let userData = userDoc.data() || {}; // Initialize userData as an empty object
-
-    // Initialize the characters array if it doesn't exist
-    userData.characters = userData.characters || [];
-
-    // Check if the IGN is already in use across all users
-    const usersRef = db.collection('users');
-    const usersQuery = await usersRef.get();
-
-    for (const userDoc of usersQuery.docs) {
-      const userData = userDoc.data();
-
-      if (userData.characters && userData.characters.some(character => character.ign.toLowerCase() === ign)) {
-        await interaction.reply('This IGN is already in use by another user. Please choose a different IGN.');
+    try {
+      // Check if the user executing the command has the "Sentinel" role
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      if (!member.roles.cache.some(role => role.name === 'Sentinel')) {
+        interaction.reply('You do not have permission to use this command.');
         return;
       }
+
+      // Get user, character class, and IGN from command options
+      const user = interaction.options.getUser('user');
+      const userId = user.id;
+      const characterClass = interaction.options.getString('class');
+      const ign = interaction.options.getString('ign');
+
+      // Validate IGN length
+      if (ign.length < 4 || ign.length >= 16) {
+        await interaction.reply('IGN should be 4 to 16 characters in length.');
+        return;
+      }
+
+      // Validate IGN format (letters and numbers only)
+      const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
+      if (!isValidIgn) {
+        await interaction.reply('IGN should contain only letters and numbers.');
+        return;
+      }
+
+      // Reference to the user's document
+      const userRef = db.collection('users').doc(userId);
+
+      // Check if the user's document exists
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        // Initialize the user document with an empty 'characters' array
+        await userRef.set({ characters: [] });
+      }
+
+      // Get or initialize the user's character data
+      let userData = userDoc.data() || {};
+      userData.characters = userData.characters || [];
+
+      // Check if the IGN is already added for this user
+      if (userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
+        await interaction.reply('This IGN is already added for this user. Please choose a different IGN.');
+        return;
+      }
+
+      // Add the new character (IGN and class) to the characters array
+      userData.characters.push({ ign, class: characterClass });
+
+      // Update the user document with the modified characters
+      await userRef.update({ characters: userData.characters });
+
+      await interaction.reply(`The character information has been added for ${user.tag}. Class: ${characterClass}, IGN: ${ign}`);
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
-
-    // Add the new character (IGN and class) to the characters array
-    userData.characters.push({ ign, class: characterClass });
-
-    // Update the user document with the modified characters
-    await userRef.update({ characters: userData.characters });
-
-    await interaction.reply(`The character information has been added for ${user.tag}. Class: ${characterClass}, IGN: ${ign}`);
   },
 };
