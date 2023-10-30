@@ -1,5 +1,5 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const Character = require('../../helpers/character');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -36,63 +36,37 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      // Check if the user executing the command has the "Sentinel" role
-      const member = await interaction.guild.members.fetch(interaction.user.id);
-      if (!member.roles.cache.some(role => role.name === 'Sentinel')) {
-        interaction.reply('You do not have permission to use this command.');
-        return;
-      }
-
-      // Get user, character class, and IGN from command options
       const user = interaction.options.getUser('user');
       const userId = user.id;
       const characterClass = interaction.options.getString('class');
       const ign = interaction.options.getString('ign');
+      const serverId = interaction.guild.id;
 
-      // Validate IGN length
-      if (ign.length < 4 || ign.length >= 16) {
-        await interaction.reply('IGN should be 4 to 16 characters in length.');
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        return interaction.reply('You must be an administrator to modify other character information.');
+      }
+
+      const validation = Character.validateIGN(ign);
+
+      if (!validation.valid) {
+        await interaction.reply(validation.message);
         return;
       }
 
-      // Validate IGN format (letters and numbers only)
-      const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
-      if (!isValidIgn) {
-        await interaction.reply('IGN should contain only letters and numbers.');
-        return;
+      const character = new Character(userId, characterClass, ign);
+
+      // Check if the character was added successfully
+      const added = await character.addToFirestore(serverId);
+
+      if (added) {
+        interaction.reply(`The character information has been added for ${user.tag}. Class: ${characterClass}, IGN: ${ign}`);
+      } else {
+        interaction.reply('This IGN is already added for this user in this server. Please choose a different IGN.');
       }
-
-      // Reference to the user's document
-      const userRef = db.collection('users').doc(userId);
-
-      // Check if the user's document exists
-      const userDoc = await userRef.get();
-
-      if (!userDoc.exists) {
-        // Initialize the user document with an empty 'characters' array
-        await userRef.set({ characters: [] });
-      }
-
-      // Get or initialize the user's character data
-      let userData = userDoc.data() || {};
-      userData.characters = userData.characters || [];
-
-      // Check if the IGN is already added for this user
-      if (userData.characters.some(character => character.ign.toLowerCase() === ign.toLowerCase())) {
-        await interaction.reply('This IGN is already added for this user. Please choose a different IGN.');
-        return;
-      }
-
-      // Add the new character (IGN and class) to the characters array
-      userData.characters.push({ ign, class: characterClass });
-
-      // Update the user document with the modified characters
-      await userRef.update({ characters: userData.characters });
-
-      await interaction.reply(`The character information has been added for ${user.tag}. Class: ${characterClass}, IGN: ${ign}`);
     } catch (error) {
       console.error(error);
-      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+      interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
   },
 };

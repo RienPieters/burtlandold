@@ -2,6 +2,7 @@ module.exports = {
     name: 'ready',
     once: true,
     async execute(client) {
-        console.log(`Ready! Logged in as ${client.user.tag}`);
+        setInterval(client.choosePresence, 60 * 1000);
+        console.log(`Logged in as ${client.user.tag}!`);
     },
 }

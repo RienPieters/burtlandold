@@ -17,26 +17,25 @@ module.exports = (client, db) => {
             }
         }
 
-        const clientId = process.env.CLIENT_ID;
-        const guildId = process.env.GUILD_ID;
-        const token = process.env.DISCORD_TOKEN;
+    const clientId = process.env.CLIENT_ID;
+    const token = process.env.DISCORD_TOKEN;
 
-        const rest = new REST({ version: '10' }).setToken(token);
-        try {
-            console.log('Started refreshing application (/) commands.');
-            await rest.put(
-                Routes.applicationGuildCommands(clientId, guildId),
-                {
-                    body: client.commandArray
-                });
+    const rest = new REST({ version: '10' }).setToken(token);
 
-            console.log('Successfully reloaded application (/) commands.');
-        } catch (error) {
-            console.error(error);
+    try {
+      console.log('Started refreshing application (/) commands globally.');
+
+      // Register commands globally
+      await rest.put(
+        Routes.applicationCommands(clientId),
+        {
+          body: client.commandArray,
         }
+      );
 
+      console.log('Successfully refreshed application (/) commands globally.');
+    } catch (error) {
+      console.error('Error refreshing global commands:', error);
     }
-}
-
-
-
+  };
+};

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ButtonBuilder, ActionRowBuilder } = require('discord.js');
-const db = require('../../db');
+const Character = require('../../helpers/character');
+const Server = require('../../helpers/server');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -8,76 +9,23 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const member = await interaction.guild.members.fetch(interaction.user.id);
-
-      if (!member.roles.cache.some(role => role.name === 'Inviter')) {
-        return interaction.reply('You do not have permission to use this command.');
-      }
-
       const userId = interaction.user.id;
+      const serverId = interaction.guild.id;
 
-      const usersRef = db.collection('users');
-      const usersQuery = await usersRef.get();
+      const allCharacterInfoWithUsernames = await Character.getAllCharactersInServer(serverId);
 
-      if (usersQuery.empty) {
+      if (allCharacterInfoWithUsernames.length === 0) {
         return interaction.reply('No character information found for any user.');
       }
-
-      const allCharacterInfo = [];
-
-      for (const userDoc of usersQuery.docs) {
-        const userData = userDoc.data();
-        const characters = userData.characters || [];
-
-        if (characters.length === 0) {
-          continue;
-        }
-
-        const groupedCharacters = {};
-
-        characters.forEach((character) => {
-          if (!groupedCharacters[character.class]) {
-            groupedCharacters[character.class] = [];
-          }
-          groupedCharacters[character.class].push(character.ign);
-        });
-
-        const username = userDoc.id;
-
-        allCharacterInfo.push({ user: username, characters: groupedCharacters });
-      }
-
-      if (allCharacterInfo.length === 0) {
-        return interaction.reply('No character information found for any user.');
-      }
-
-      const allCharacterInfoWithUsernames = [];
-
-      for (const userData of allCharacterInfo) {
-        const userCharacters = [];
-        const sortedClasses = Object.keys(userData.characters).sort();
-
-        for (const characterClass of sortedClasses) {
-          const characterNames = userData.characters[characterClass].map(userID => {
-            const member = interaction.guild.members.cache.get(userID);
-            return member ? member.displayName : userID;
-          });
-          userCharacters.push(`**${characterClass}**: ${characterNames.join(', ')}`);
-        }
-
-        const member = interaction.guild.members.cache.get(userData.user);
-        const username = member ? member.displayName : userData.user;
-        allCharacterInfoWithUsernames.push({
-          user: username,
-          characters: userCharacters,
-        });
-      }
-
-      allCharacterInfoWithUsernames.sort((a, b) => a.user.localeCompare(b.user));
 
       const charactersPerPage = 5;
       let currentPage = 0;
       let characterInfoMessage = '';
+
+      let totalPages = Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage);
+
+      const server = new Server(serverId);
+      const customColor = await server.getCustomColor();
 
       const sendPage = async (page) => {
         currentPage = page;
@@ -87,13 +35,14 @@ module.exports = {
         characterInfoMessage = allCharacterInfoWithUsernames
           .slice(start, end)
           .map((userData) => {
-            return `**For ${userData.user}**:\n${userData.characters.join('\n')}`;
+            const characters = userData.characters.join('\n');
+            return `**For ${userData.user}**:\n${characters}`;
           }).join('\n\n');
 
         const embed = {
-          title: `Character Information (Page ${page + 1}/${Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage)})`,
+          title: `Character Information (Page ${page + 1}/${totalPages})`,
           description: characterInfoMessage,
-          color: 0x00ff00,
+          color: customColor ? parseInt(customColor.slice(1), 16) : 0xffffff, // Convert the hex color to an integer
         };
 
         const row = new ActionRowBuilder()
@@ -107,7 +56,7 @@ module.exports = {
               .setCustomId('next')
               .setLabel('Next')
               .setStyle('Secondary')
-              .setDisabled(page === Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage) - 1 || userId !== interaction.user.id),
+              .setDisabled(page === totalPages - 1 || userId !== interaction.user.id),
           );
 
         if (!interaction.replied) {
@@ -131,7 +80,7 @@ module.exports = {
             }
           }
         } else if (buttonInteraction.customId === 'next') {
-          if (currentPage < Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage) - 1) {
+          if (currentPage < totalPages - 1) {
             if (userId === buttonInteraction.user.id) {
               if (!buttonInteraction.deferred) {
                 await buttonInteraction.deferUpdate();
@@ -145,9 +94,9 @@ module.exports = {
       collector.on('end', async (collected, reason) => {
         if (reason === 'time') {
           const embed = {
-            title: `Character Information (Page ${currentPage + 1}/${Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage)})`,
+            title: `Character Information (Page ${currentPage + 1}/${totalPages})`,
             description: characterInfoMessage,
-            color: 0x00ff00,
+            color: customColor ? parseInt(customColor.slice(1), 16) : 0xffffff, // Convert the hex color to an integer
           };
 
           await interaction.editReply({ embeds: [embed], components: [] });

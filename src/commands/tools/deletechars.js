@@ -1,54 +1,37 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const Character = require('../../helpers/character');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('deletechar')
-        .setDescription('Delete a character from your information')
-        .addStringOption(option =>
-            option
-                .setName('ign')
-                .setDescription('IGN of the character to delete')
-                .setRequired(true)
-        ),
+  data: new SlashCommandBuilder()
+    .setName('deletechar')
+    .setDescription('Delete a character from your information')
+    .addStringOption(option =>
+      option
+        .setName('ign')
+        .setDescription('IGN of the character to delete')
+        .setRequired(true)
+    ),
 
-    async execute(interaction) {
-        try {
-            const ignToDelete = interaction.options.getString('ign'); // Selected IGN
-            const userId = interaction.user.id; // User who initiated the command
+  async execute(interaction) {
+    try {
+      const ignToDelete = interaction.options.getString('ign');
+      const userId = interaction.user.id;
+      const serverId = interaction.guild.id;
 
-            // Reference to the users collection
-            const usersRef = db.collection('users');
+      // Create a Character instance for the character to be deleted
+      const characterToDelete = new Character(userId, '', ignToDelete);
 
-            // Get the user document for the current user
-            const userDoc = await usersRef.doc(userId).get();
+      // Attempt to remove the character from Firestore
+      const removed = await characterToDelete.removeFromFirestore(serverId);
 
-            if (!userDoc.exists) {
-                await interaction.reply("User document not found. Please make sure you registered a character first.");
-                return;
-            }
-
-            const userData = userDoc.data();
-
-            // Check if the user has a `characters` array
-            if (!userData.characters) {
-                await interaction.reply("No characters found. Please make sure you registered a character first.");
-                return;
-            }
-
-            const updatedCharacters = userData.characters.filter(character => character.ign.toLowerCase() !== ignToDelete.toLowerCase());
-
-            if (updatedCharacters.length !== userData.characters.length) {
-                // Update the user document with the modified `characters` array
-                await usersRef.doc(userId).update({ characters: updatedCharacters });
-                await interaction.reply(`Character with IGN '${ignToDelete}' has been deleted.`);
-                return;
-            }
-
-            await interaction.reply(`Character with IGN '${ignToDelete}' not found in your character list.`);
-        } catch (error) {
-            console.error(error);
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-        }
-    },
+      if (removed) {
+        await interaction.reply(`Character with IGN '${ignToDelete}' has been deleted.`);
+      } else {
+        await interaction.reply(`Character with IGN '${ignToDelete}' not found in your character list.`);
+      }
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
+  },
 };

@@ -27,7 +27,6 @@ for (const folder of functionFolders) {
 const token = process.env.DISCORD_TOKEN;
 
 
-
 client.handleEvents();
 client.handleCommands();
 client.login(token);

@@ -1,77 +1,54 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const Character = require('../../helpers/character');
+const User = require('../../helpers/user');
+const Server = require('../../helpers/server');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('userchars')
-        .setDescription('Retrieve and display character information for a user')
-        .addUserOption(option =>
-            option
-                .setName('user')
-                .setDescription('The user to retrieve characters for')
-                .setRequired(true)
-        ),
+  data: new SlashCommandBuilder()
+    .setName('userchars')
+    .setDescription('Retrieve and display character information for a user')
+    .addUserOption((option) =>
+      option
+        .setName('user')
+        .setDescription('The user to retrieve characters for')
+        .setRequired(true)
+    ),
 
-    async execute(interaction) {
-        try {
-            const user = interaction.options.getUser('user'); // Get the mentioned user
+  async execute(interaction) {
+    try {
+      const user = interaction.options.getUser('user');
 
-            if (!user) {
-                interaction.reply('Please mention a user to view their character information.');
-                return;
-            }
+      if (!user) {
+        await interaction.reply('Please mention a user to view their character information.');
+        return;
+      }
 
-            const userId = user.id; // Get the user's ID
+      const serverId = interaction.guild.id;
+      const userId = user.id;
 
-            const userRef = db.collection('users').doc(userId);
-            const userDoc = await userRef.get();
+      const { found, characters, message } = await User.getUserCharacters(userId, serverId);
 
-            if (!userDoc.exists) {
-                interaction.reply(`${user.displayName} hasn't stored any character information yet.`);
-                return;
-            }
+      if (!found) {
+        await interaction.reply(message);
+        return;
+      }
 
-            const userData = userDoc.data();
-            const characters = userData.characters || [];
+      const formattedCharacterInfo = Character.formatCharacterInfo(characters);
 
-            if (characters.length === 0) {
-                interaction.reply(`${user.displayName} hasn't stored any character information yet.`);
-                return;
-            }
+      const username = user.displayName;
+      const server = new Server(serverId);
+      const customColor = await server.getCustomColor();
 
-            const groupedCharacters = {};
+      const embed = {
+        title: `Character Information for ${username}:`,
+        description: formattedCharacterInfo,
+        color: customColor ? parseInt(customColor.slice(1), 16) : 0xffffff,
+      };
 
-            characters.forEach((character) => {
-                // Group characters by class
-                if (!groupedCharacters[character.class]) {
-                    groupedCharacters[character.class] = [];
-                }
-                groupedCharacters[character.class].push(character.ign);
-            });
-
-            const userCharacters = [];
-            const sortedClasses = Object.keys(groupedCharacters).sort();
-            for (const characterClass of sortedClasses) {
-                // Display classes with multiple IGNs as a comma-separated list
-                if (groupedCharacters[characterClass].length > 1) {
-                    userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
-                } else {
-                    userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
-                }
-            }
-
-            const username = user.displayName;
-
-            const embed = {
-                title: `Character Information for ${username}`,
-                description: userCharacters.join('\n'),
-                color: 0x00ff00, // Green color
-            };
-
-            interaction.reply({ embeds: [embed] });
-        } catch (error) {
-            console.error(error);
-            interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-        }
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
+  },
 };

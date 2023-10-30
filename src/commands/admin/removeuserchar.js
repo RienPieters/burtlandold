@@ -1,5 +1,5 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const Character = require('../../helpers/character');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -20,11 +20,10 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      // Check if the user executing the command has the "Sentinel" role
+      // Check if the user executing the command has the "Administrator" permission
       const member = await interaction.guild.members.fetch(interaction.user.id);
-      if (!member.roles.cache.some(role => role.name === 'Sentinel')) {
-        interaction.reply('You do not have permission to use this command.');
-        return;
+      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        return interaction.reply('You must be an administrator to modify character information.');
       }
 
       // Get user and IGN to remove from command options
@@ -32,31 +31,17 @@ module.exports = {
       const userId = user.id;
       const ignToRemove = interaction.options.getString('ign');
 
-      // Reference to the user's document
-      const usersRef = db.collection('users');
+      // Create an instance of Character
+      const characterToRemove = new Character(userId, '', ignToRemove);
 
-      // Check if the user's document exists
-      const userDoc = await usersRef.doc(userId).get();
+      // Remove the character with the specified IGN
+      const removed = await characterToRemove.removeFromFirestore(interaction.guild.id);
 
-      if (!userDoc.exists) {
-        await interaction.reply("User document not found. Please make sure you have previously registered.");
-        return;
-      }
-
-      const userData = userDoc.data();
-
-      // Find the character with the specified IGN and remove it
-      const updatedCharacters = userData.characters.filter(character => character.ign.toLowerCase() !== ignToRemove.toLowerCase());
-
-      // Update the user document with the modified characters
-      if (updatedCharacters.length !== userData.characters.length) {
-        // Update the user document with the modified `characters` array
-        await usersRef.doc(userId).update({ characters: updatedCharacters });
+      if (removed) {
         await interaction.reply(`Character with IGN '${ignToRemove}' has been removed.`);
-        return;
+      } else {
+        interaction.reply(`The IGN '${ignToRemove}' was not found in ${user.tag}'s character information.`);
       }
-
-      interaction.reply(`The IGN '${ignToRemove}' has been removed from ${user.tag}'s character information.`);
     } catch (error) {
       console.error(error);
       await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });

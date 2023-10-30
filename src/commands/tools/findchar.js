@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const Character = require('../../helpers/character');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,47 +15,23 @@ module.exports = {
   async execute(interaction) {
     try {
       const ignToFind = interaction.options.getString('ign');
+      const serverId = interaction.guild.id;
 
-      // Reference to the users collection
-      const usersRef = db.collection('users');
+      // Find characters by IGN across all users in the server
+      const foundCharacters = await Character.findCharactersByIGN(serverId, ignToFind);
 
-      // Query all user documents
-      const usersQuery = await usersRef.get();
-
-      // Array to store matching character information
-      const foundCharacters = [];
-
-      // Iterate through user documents to find characters with the specified IGN
-      for (const userDoc of usersQuery.docs) {
-        const userData = userDoc.data();
-
-        if (!userData.characters) {
-          continue; // Skip users with no characters
-        }
-
-        const matchingCharacters = userData.characters.filter(character => character.ign.toLowerCase() === ignToFind.toLowerCase());
-
-        if (matchingCharacters.length > 0) {
-          // Found matching characters in this user's document
-          foundCharacters.push({
-            user: userDoc.id,
-            characters: matchingCharacters,
-          });
-        }
-      }
-
-      if (foundCharacters.length === 0) {
-        await interaction.reply(`IGN '**${ignToFind}**' not found.`);
+      if (!foundCharacters || foundCharacters.length === 0) {
+        await interaction.reply(`IGN '**${ignToFind}**' not found in this server.`);
         return;
       }
 
-      // Characters with the specified IGN found
+      // Construct the response message
       const response = foundCharacters.map(entry => {
         const charactersInfo = entry.characters.map(character => {
-          return `**Class**: ${character.class}`;
+          return `**User**: <@${entry.userId}>\n**Class**: ${character.class}`;
         }).join('\n');
 
-        return `**User**: <@${entry.user}>\n${charactersInfo}`;
+        return charactersInfo;
       }).join('\n\n');
 
       await interaction.reply(`IGN **${ignToFind}** found:\n${response}`);

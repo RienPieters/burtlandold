@@ -1,63 +1,40 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const db = require('../../db');
+const Character = require('../../helpers/character');
+const User = require('../../helpers/user');
+const Server = require('../../helpers/server');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('mychars')
     .setDescription('Retrieve and display your character information'),
+
   async execute(interaction) {
-    // Get the user's ID
-    const userId = interaction.user.id;
+    try {
+      const userId = interaction.user.id;
+      const serverId = interaction.guild.id;
 
-    // Reference to the user's document
-    const userRef = db.collection('users').doc(userId);
+      const { found, characters, message } = await User.getUserCharacters(userId, serverId);
 
-    // Get the user's document
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      await interaction.reply("You haven't stored any character information yet.");
-      return;
-    }
-
-    const userData = userDoc.data();
-    const characters = userData.characters || [];
-
-    if (characters.length === 0) {
-      await interaction.reply("You haven't stored any character information yet.");
-      return;
-    }
-
-    const groupedCharacters = {};
-
-    characters.forEach((character) => {
-      // Group characters by class
-      if (!groupedCharacters[character.class]) {
-        groupedCharacters[character.class] = [];
+      if (!found) {
+        await interaction.reply(message);
+        return;
       }
-      groupedCharacters[character.class].push(character.ign);
-    });
 
-    const userCharacters = [];
+      const formattedCharacterInfo = Character.formatCharacterInfo(characters);
+      
+      const server = new Server(serverId);
+      const customColor = await server.getCustomColor();
 
-    const sortedClasses = Object.keys(groupedCharacters).sort();
-    for (const characterClass of sortedClasses) {
-      // Display classes with multiple IGNs as a comma-separated list
-      if (groupedCharacters[characterClass].length > 1) {
-        userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass].join(', ')}`);
-      } else {
-        userCharacters.push(`**${characterClass}**: ${groupedCharacters[characterClass][0]}`);
-      }
+      const embed = {
+        title: `Your Character Information:`,
+        description: formattedCharacterInfo,
+        color: customColor ? parseInt(customColor.slice(1), 16) : 0xffffff,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
-
-    const username = interaction.user.displayName;
-
-    const embed = {
-      title: `Your Character Information, ${username}:`,
-      description: userCharacters.join('\n'),
-      color: 0x00ff00, // Green color
-    };
-
-    await interaction.reply({ embeds: [embed] });
   },
 };
