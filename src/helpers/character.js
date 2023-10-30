@@ -106,70 +106,58 @@ class Character {
         return { valid: true };
     }
 
-    async getAllCharactersInServer(serverId) {
-        const usersRef = db.collection('users');
-        const usersQuery = await usersRef.get();
+    async getAllCharactersInServer(serverId, interaction) {
+        try {
+            const guild = interaction.guild;
+            const members = await guild.members.fetch();
+            const usersRef = db.collection('users');
+            const usersQuery = await usersRef.get();
 
-        if (usersQuery.empty) {
-            return [];
-        }
-
-        const allCharacterInfo = [];
-
-        for (const userDoc of usersQuery.docs) {
-            const userData = userDoc.data();
-            const characters = userData.characters || [];
-
-            if (characters.length === 0) {
-                continue;
+            if (usersQuery.empty) {
+                return {}; // Return an empty object instead of an empty array
             }
 
-            // Filter characters by the server (guild) ID
-            const filteredCharacters = characters.filter((character) => character.server === serverId);
+            const allCharacterInfo = {};
 
-            if (filteredCharacters.length === 0) {
-                continue; // Skip users who don't have characters in this server
-            }
+            for (const userDoc of usersQuery.docs) {
+                const userData = userDoc.data();
+                const characters = userData.characters || [];
 
-            const groupedCharacters = {};
-
-            filteredCharacters.forEach((character) => {
-                if (!groupedCharacters[character.class]) {
-                    groupedCharacters[character.class] = [];
+                if (characters.length === 0) {
+                    continue;
                 }
-                groupedCharacters[character.class].push(character.ign);
-            });
 
-            const username = userDoc.id;
+                const filteredCharacters = characters.filter((character) => character.server === serverId);
 
-            allCharacterInfo.push({ user: username, characters: groupedCharacters });
-        }
+                if (filteredCharacters.length === 0) {
+                    continue;
+                }
 
-        if (allCharacterInfo.length === 0) {
-            return [];
-        }
+                const userId = userDoc.id;
+                const member = members.get(userId);
+                const displayName = member ? member.displayName : 'Unknown';
 
-        const allCharacterInfoPerUser = [];
+                const charactersByClass = {};
+                for (const character of filteredCharacters) {
+                    const characterClass = character.class;
+                    if (!charactersByClass[characterClass]) {
+                        charactersByClass[characterClass] = [];
+                    }
+                    charactersByClass[characterClass].push(character.ign);
+                }
 
-        for (const userData of allCharacterInfo) {
-            const userCharacters = [];
-            const sortedClasses = Object.keys(userData.characters).sort();
-
-            for (const characterClass of sortedClasses) {
-                const characterNames = userData.characters[characterClass];
-                userCharacters.push(`**${characterClass}**: ${characterNames.join(', ')}`);
+                allCharacterInfo[displayName] = charactersByClass;
             }
 
-            allCharacterInfoPerUser.push({
-                user: userData.user,
-                characters: userCharacters,
-            });
+            console.log(allCharacterInfo);
+
+            return allCharacterInfo; // Return the object with character information
+        } catch (error) {
+            console.error('Error getting all characters in server:', error);
+            return {};
         }
-
-        allCharacterInfoPerUser.sort((a, b) => a.user.localeCompare(b.user));
-
-        return allCharacterInfoPerUser;
     }
+
 }
 
 module.exports = Character;

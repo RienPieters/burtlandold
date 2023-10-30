@@ -12,19 +12,19 @@ module.exports = {
       const userId = interaction.user.id;
       const serverId = interaction.guild.id;
 
-      const helper = new Character(userId, this, '' );
+      const character = new Character(userId, '', '');
 
-      const allCharactersPerUser = await helper.getAllCharactersInServer(serverId);
+      const allCharactersPerUser = await character.getAllCharactersInServer(serverId, interaction);
 
-      if (allCharactersPerUser.length === 0) {
+      if (Object.keys(allCharactersPerUser).length === 0) {
         return interaction.reply('No character information found for any user.');
       }
 
       const charactersPerPage = 5;
       let currentPage = 0;
       let characterInfoMessage = '';
-
-      let totalPages = Math.ceil(allCharactersPerUser.length / charactersPerPage);
+      const usernames = Object.keys(allCharactersPerUser);
+      const totalPages = Math.ceil(usernames.length / charactersPerPage);
 
       const server = new Server(serverId);
       const customColor = await server.getCustomColor();
@@ -34,12 +34,21 @@ module.exports = {
         const start = page * charactersPerPage;
         const end = (page + 1) * charactersPerPage;
 
-        characterInfoMessage = allCharactersPerUser
+        characterInfoMessage = usernames
           .slice(start, end)
-          .map((userData) => {
-            const characters = userData.characters.join('\n');
-            return `**For ${userData.user}**:\n${characters}`;
-          }).join('\n\n');
+          .map((username) => {
+            const userCharacters = allCharactersPerUser[username];
+            const userCharacterInfo = [];
+
+            for (const className in userCharacters) {
+              if (userCharacters[className].length > 0) {
+                userCharacterInfo.push(`**${className}**:${userCharacters[className].map(character => character).join(', ')}`); // Access the IGN of the character
+              }
+            }
+
+            return `**For ${username}**:\n${userCharacterInfo.join('\n')}`;
+          })
+          .join('\n\n');
 
         const embed = {
           title: `Character Information (Page ${page + 1}/${totalPages})`,
@@ -72,24 +81,12 @@ module.exports = {
       const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 });
 
       collector.on('collect', async (buttonInteraction) => {
-        if (buttonInteraction.customId === 'previous') {
-          if (currentPage > 0) {
-            if (userId === buttonInteraction.user.id) {
-              if (!buttonInteraction.deferred) {
-                await buttonInteraction.deferUpdate();
-                sendPage(currentPage - 1);
-              }
-            }
-          }
-        } else if (buttonInteraction.customId === 'next') {
-          if (currentPage < totalPages - 1) {
-            if (userId === buttonInteraction.user.id) {
-              if (!buttonInteraction.deferred) {
-                await buttonInteraction.deferUpdate();
-                sendPage(currentPage + 1);
-              }
-            }
-          }
+        if (buttonInteraction.customId === 'previous' && currentPage > 0) {
+          await buttonInteraction.deferUpdate();
+          sendPage(currentPage - 1);
+        } else if (buttonInteraction.customId === 'next' && currentPage < totalPages - 1) {
+          await buttonInteraction.deferUpdate();
+          sendPage(currentPage + 1);
         }
       });
 
