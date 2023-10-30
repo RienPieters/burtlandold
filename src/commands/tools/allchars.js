@@ -42,7 +42,7 @@ module.exports = {
 
             for (const className in userCharacters) {
               if (userCharacters[className].length > 0) {
-                userCharacterInfo.push(`**${className}**:${userCharacters[className].map(character => character).join(', ')}`); // Access the IGN of the character
+                userCharacterInfo.push(`**${className}**: ${userCharacters[className].map(character => character).join(', ')}`); // Access the IGN of the character
               }
             }
 
