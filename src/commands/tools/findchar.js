@@ -17,8 +17,10 @@ module.exports = {
       const ignToFind = interaction.options.getString('ign');
       const serverId = interaction.guild.id;
 
+      const helper = new Character('', '', ignToFind);
+
       // Find characters by IGN across all users in the server
-      const foundCharacters = await Character.findCharactersByIGN(serverId, ignToFind);
+      const foundCharacters = await helper.findCharactersByIGN(serverId, ignToFind);
 
       if (!foundCharacters || foundCharacters.length === 0) {
         await interaction.reply(`IGN '**${ignToFind}**' not found in this server.`);

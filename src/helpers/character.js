@@ -1,4 +1,4 @@
-const db = require('../db')
+const db = require('../db');
 
 class Character {
     constructor(userId, characterClass, ign) {
@@ -47,7 +47,7 @@ class Character {
         return true; // Character removed successfully
     }
 
-    static async findCharactersByIGN(serverId, ignToFind) {
+    async findCharactersByIGN(serverId, ignToFind) {
         const usersRef = db.collection('users');
         const usersQuery = await usersRef.get();
 
@@ -79,9 +79,8 @@ class Character {
 
         return null;
     }
-    
-    static formatCharacterInfo(characters) {
 
+    static formatCharacterInfo(characters) {
         const sortedClasses = Object.keys(characters).sort();
         const characterList = sortedClasses.map((characterClass) => {
             const ignList = characters[characterClass].join(', ');
@@ -89,93 +88,88 @@ class Character {
         });
 
         return characterList.join('\n');
-  }
-  
-  static validateIGN(ign) {
-    // Check IGN length
-    if (ign.length <= 1 || ign.length >= 16) {
-      return { valid: false, message: 'IGN should be 1 to 16 characters in length.' };
     }
-  
-    // Check IGN format (letters and numbers only)
-    const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
-  
-    if (!isValidIgn) {
-      return { valid: false, message: 'IGN should contain only letters and numbers.' };
-    }
-  
-    return { valid: true };
-  }
 
-  static async getAllCharactersInServer(serverId) {
-    try {
-      const usersRef = db.collection('users');
-      const usersQuery = await usersRef.get();
-
-      if (usersQuery.empty) {
-        return [];
-      }
-
-      const allCharacterInfo = [];
-
-      for (const userDoc of usersQuery.docs) {
-        const userData = userDoc.data();
-        const characters = userData.characters || [];
-
-        if (characters.length === 0) {
-          continue;
+    static validateIGN(ign) {
+        // Check IGN length
+        if (ign.length < 1 || ign.length > 16) {
+            return { valid: false, message: 'IGN should be 1 to 16 characters in length.' };
         }
 
-        // Filter characters by the server (guild) ID
-        const filteredCharacters = characters.filter((character) => character.server === serverId);
+        // Check IGN format (letters and numbers only)
+        const isValidIgn = /^[A-Za-z0-9]+$/.test(ign);
 
-        if (filteredCharacters.length === 0) {
-          continue; // Skip users who don't have characters in this server
+        if (!isValidIgn) {
+            return { valid: false, message: 'IGN should contain only letters and numbers.' };
         }
 
-        const groupedCharacters = {};
-
-        filteredCharacters.forEach((character) => {
-          if (!groupedCharacters[character.class]) {
-            groupedCharacters[character.class] = [];
-          }
-          groupedCharacters[character.class].push(character.ign);
-        });
-
-        const username = userDoc.id;
-
-        allCharacterInfo.push({ user: username, characters: groupedCharacters });
-      }
-
-      if (allCharacterInfo.length === 0) {
-        return [];
-      }
-
-      const allCharacterInfoWithUsernames = [];
-
-      for (const userData of allCharacterInfo) {
-        const userCharacters = [];
-        const sortedClasses = Object.keys(userData.characters).sort();
-
-        for (const characterClass of sortedClasses) {
-          const characterNames = userData.characters[characterClass];
-          userCharacters.push(`**${characterClass}**: ${characterNames.join(', ')}`);
-        }
-
-        allCharacterInfoWithUsernames.push({
-          user: userData.user,
-          characters: userCharacters,
-        });
-      }
-
-      allCharacterInfoWithUsernames.sort((a, b) => a.user.localeCompare(b.user));
-
-      return allCharacterInfoWithUsernames;
-    } catch (error) {
-      console.error('Error getting all characters in server:', error);
-      return [];
+        return { valid: true };
     }
-  }
+
+    async getAllCharactersInServer(serverId) {
+        const usersRef = db.collection('users');
+        const usersQuery = await usersRef.get();
+
+        if (usersQuery.empty) {
+            return [];
+        }
+
+        const allCharacterInfo = [];
+
+        for (const userDoc of usersQuery.docs) {
+            const userData = userDoc.data();
+            const characters = userData.characters || [];
+
+            if (characters.length === 0) {
+                continue;
+            }
+
+            // Filter characters by the server (guild) ID
+            const filteredCharacters = characters.filter((character) => character.server === serverId);
+
+            if (filteredCharacters.length === 0) {
+                continue; // Skip users who don't have characters in this server
+            }
+
+            const groupedCharacters = {};
+
+            filteredCharacters.forEach((character) => {
+                if (!groupedCharacters[character.class]) {
+                    groupedCharacters[character.class] = [];
+                }
+                groupedCharacters[character.class].push(character.ign);
+            });
+
+            const username = userDoc.id;
+
+            allCharacterInfo.push({ user: username, characters: groupedCharacters });
+        }
+
+        if (allCharacterInfo.length === 0) {
+            return [];
+        }
+
+        const allCharacterInfoPerUser = [];
+
+        for (const userData of allCharacterInfo) {
+            const userCharacters = [];
+            const sortedClasses = Object.keys(userData.characters).sort();
+
+            for (const characterClass of sortedClasses) {
+                const characterNames = userData.characters[characterClass];
+                userCharacters.push(`**${characterClass}**: ${characterNames.join(', ')}`);
+            }
+
+            allCharacterInfoPerUser.push({
+                user: userData.user,
+                characters: userCharacters,
+            });
+        }
+
+        allCharacterInfoPerUser.sort((a, b) => a.user.localeCompare(b.user));
+
+        return allCharacterInfoPerUser;
+    }
 }
 
 module.exports = Character;

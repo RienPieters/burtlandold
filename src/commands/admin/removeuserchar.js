@@ -31,6 +31,7 @@ module.exports = {
       const userId = user.id;
       const ignToRemove = interaction.options.getString('ign');
 
+
       // Create an instance of Character
       const characterToRemove = new Character(userId, '', ignToRemove);
 
@@ -39,9 +40,8 @@ module.exports = {
 
       if (removed) {
         await interaction.reply(`Character with IGN '${ignToRemove}' has been removed.`);
-      } else {
-        interaction.reply(`The IGN '${ignToRemove}' was not found in ${user.tag}'s character information.`);
-      }
+        return;
+      } 
     } catch (error) {
       console.error(error);
       await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });

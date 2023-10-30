@@ -31,8 +31,6 @@ module.exports = {
 
     if (updated) {
       return interaction.reply(`Custom color for the server has been set to ${color}.`);
-    } else {
-      return interaction.reply('An error occurred while setting the custom color.');
-    }
+    } 
   },
 };

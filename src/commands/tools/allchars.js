@@ -12,9 +12,11 @@ module.exports = {
       const userId = interaction.user.id;
       const serverId = interaction.guild.id;
 
-      const allCharacterInfoWithUsernames = await Character.getAllCharactersInServer(serverId);
+      const helper = new Character(userId, this, '' );
 
-      if (allCharacterInfoWithUsernames.length === 0) {
+      const allCharactersPerUser = await helper.getAllCharactersInServer(serverId);
+
+      if (allCharactersPerUser.length === 0) {
         return interaction.reply('No character information found for any user.');
       }
 
@@ -22,7 +24,7 @@ module.exports = {
       let currentPage = 0;
       let characterInfoMessage = '';
 
-      let totalPages = Math.ceil(allCharacterInfoWithUsernames.length / charactersPerPage);
+      let totalPages = Math.ceil(allCharactersPerUser.length / charactersPerPage);
 
       const server = new Server(serverId);
       const customColor = await server.getCustomColor();
@@ -32,7 +34,7 @@ module.exports = {
         const start = page * charactersPerPage;
         const end = (page + 1) * charactersPerPage;
 
-        characterInfoMessage = allCharacterInfoWithUsernames
+        characterInfoMessage = allCharactersPerUser
           .slice(start, end)
           .map((userData) => {
             const characters = userData.characters.join('\n');
@@ -98,7 +100,6 @@ module.exports = {
             description: characterInfoMessage,
             color: customColor ? parseInt(customColor.slice(1), 16) : 0xffffff, // Convert the hex color to an integer
           };
-
           await interaction.editReply({ embeds: [embed], components: [] });
         }
       });
