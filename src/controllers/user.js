@@ -10,6 +10,14 @@ class User {
         return await userRef.get();
     }
 
+    async removeUser() {
+        await db.collection('users').doc(this.userId).delete();
+    }
+
+    userExists() {
+        return db.collection('users').doc(this.userId).exists;
+    }
+
     static async getUserCharacters(userId, serverId) {
         const userRef = db.collection('users').doc(userId);
         const userDoc = await userRef.get();
