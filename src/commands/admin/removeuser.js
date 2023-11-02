@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, PermissionsBitField, User } = require('discord.js');
-const UserHelper = require('../../helpers/user');
+const { SlashCommandBuilder, PermissionsBitField} = require('discord.js');
+const UserHelper = require('../../controllers/user');
 
 module.exports = {
   data: new SlashCommandBuilder()
